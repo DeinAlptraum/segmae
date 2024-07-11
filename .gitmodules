@@ -1,0 +1,6 @@
+[submodule "segmenter"]
+	path = segmenter
+	url = git@github.com:DeinAlptraum/segmenter.git
+[submodule "mae"]
+	path = mae
+	url = git@github.com:DeinAlptraum/mae.git

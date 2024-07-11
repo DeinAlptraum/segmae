@@ -1,0 +1,28 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[[source]]
+url = "https://download.pytorch.org/whl/cu118"
+verify_ssl = true
+name = "pytorch"
+
+[packages]
+tqdm = "*"
+opencv-python = "*"
+torchvision = { index="pytorch"}
+tensorboard = "*"
+pipenv = "*"
+timm = "==0.4.12"
+click = "*"
+hostlist = "*"
+einops = "*"
+mmsegmentation = "==0.30.0"
+torch = { index="pytorch"}
+mmcv-full = "==1.7.2"
+
+[dev-packages]
+
+[requires]
+python_version = "3.10"
