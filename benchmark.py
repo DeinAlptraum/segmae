@@ -1,5 +1,8 @@
 import sys
 import os
+from pathlib import Path
+from shutil import copyfile
+from subprocess import run as sub_run
 from argparse import ArgumentParser
 from torch.distributed.run import run as td_run, parse_args as tdr_parse_args
 
@@ -27,6 +30,8 @@ def get_args_parser():
                         help='Number of epochs to test pretraining for')
     parser.add_argument('--eval-freq', default=5, type=int,
                         help='Number of epochs to pretrain before each ADE20k evaluation run')
+    parser.add_argument('--stack', action='store_true',
+                        help='Continue training on top of the MAE paper\'s pretrained checkpoint')
 
     return parser
 
@@ -63,9 +68,17 @@ def get_seg_args(mask_method: str, epochs: int, gpu: int) -> dict:
         os.environ["SLURM_LOCALID"] = str(gpu)
     return kwargs
 
+CHECKPOINT_NAME = "mae_pretrain_vit_large.pth"
+
 def main(args):
+    # Download ADE20k if not already there
     if not os.path.isdir("segmenter/data/ade20k"):
         ade_main(["segmenter/data"])
+
+    # If training on top of the pretrained checkpoint, download it as well
+    if args.stack and not os.path.isfile(CHECKPOINT_NAME):
+        print("Downloading pretrained checkpoint...")
+        sub_run(["wget", f"https://dl.fbaipublicfiles.com/mae/pretrain/{CHECKPOINT_NAME}"])
 
     if args.mask_method not in ["patches", "segments", "four_channels", "preencoder"]:
         print(f"Unknown mask method \"{args.mask_method}\". Expected one of \"patches\", \"segments\", \"four_channels\", \"preencoder\"")
@@ -74,14 +87,24 @@ def main(args):
     if args.num_gpus > 1:
         args.gpu = -1
 
+    if args.stack:
+        epochs = 0
+        subfolder = Path(f"{args.output_dir}/pretrain_output/{args.mask_method}")
+        Path(subfolder).mkdir(parents=True, exist_ok=True)
+        copyfile(CHECKPOINT_NAME, subfolder/"checkpoint-0.pth")
+
+
     runs = args.pretrain_epochs//args.eval_freq
     for i in range(runs):
         resume = ""
-        if i:
+        if i or args.stack:
             resume = f"{args.output_dir}/pretrain_output/{args.mask_method}/checkpoint-{epochs}.pth"
         epochs = args.eval_freq * (i+1)
         print(f"Training run {i+1}/{runs} for {epochs} epochs")
         mae_args = get_mae_args(args.in1k_dir, args.output_dir, args.mask_method, args.coverage_ratio, args.gpu, epochs, resume)
+        if args.stack and i == 0:
+            mae_args += ["--stack"]
+
         if args.num_gpus > 1:
             tdr_args = ["--standalone", "--nnodes", "1", "--nproc-per-node", str(args.num_gpus)]
             tdr_args += ["mae/main_pretrain.py"]
