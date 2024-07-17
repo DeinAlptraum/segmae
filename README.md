@@ -69,3 +69,25 @@ mae_pretrain_vit_large.pth          100%[=======================================
 2024-07-17 13:25:35 (14.1 MB/s) - ‘mae_pretrain_vit_large.pth’ saved [1213314565/1213314565]
 
 ```
+
+# Logging
+The pretraining loss is logged at every epoch to `<output_dir>/pretrain_output/<mask_method>/log.txt`
+
+An example of how this looks like after three epochs can be seen here:
+```
+{"train_lr": 2.3040254237288136e-07, "train_loss": 2.176284196013111, "epoch": 0}
+{"train_lr": 6.991525423728814e-07, "train_loss": 1.9863222574783583, "epoch": 1}
+{"train_lr": 1.1679025423728815e-06, "train_loss": 1.7943545054581205, "epoch": 2}
+```
+
+For the semantic segmentation evaluation task on ADE20k, the loss after every epoch as well as the accuracy every couple epochs is logged to `<output_dir>/eval_output/segments/log_checkpoint-<pretrained_epochs>.pth.txt`
+
+An example of how this looks like after five epochs can be seen here:
+
+```
+{"train_loss": 3.6386344427169903, "train_learning_rate": 0.0009930326645405676, "val_pixel_accuracy": 22.1, "val_mean_accuracy": 1.05, "val_mean_iou": 0.34, "epoch": 0, "num_updates": 2527}
+{"train_loss": 3.4274588866247035, "train_learning_rate": 0.0009790888110164549, "epoch": 1, "num_updates": 5054}
+{"train_loss": 3.2568347486149523, "train_learning_rate": 0.000965122627872551, "epoch": 2, "num_updates": 7581}
+{"train_loss": 2.993020742978321, "train_learning_rate": 0.0009511337153377482, "val_pixel_accuracy": 43.08, "val_mean_accuracy": 3.53, "val_mean_iou": 2.17, "epoch": 3, "num_updates": 10108}
+{"train_loss": 2.563117300940447, "train_learning_rate": 0.0009371216597502798, "epoch": 4, "num_updates": 12635}
+```
