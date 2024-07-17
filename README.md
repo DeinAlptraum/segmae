@@ -32,3 +32,40 @@ The most important parts to adapt here are
 For the first pretraining test, I would use the given settings: the four_channels mask method and a coverage ratio of 15%. The latter is an arbitrary choice that feels reasonable to me. The former seems like the best bet for now, as `segments` doesn't include the mask information, and `preencoder` throws away part of the encoder after pretraining.
 
 According to our calculations, pretraining for 50 epochs with evaluation on every 5th should take roughly 4 days on 8xV100 GPUs, though pretraining on the original `patches` method for comparisons should be faster by a factor of 2 or 3. I'm not sure what a good number of pretraining epochs would be here, perhaps we should also lower this...
+
+# Downloading additional datasets and checkpoints
+The evaluation task uses the ADE20k dataset. This is expected to be in `segmenter/data/ade20k`. If this folder does not exist, it will be automatically downloaded and prepared when running the benchmark script for the first time. If you want to download _just_ the dataset, you can start the benchmark script like this:
+
+`python benchmark.py --in1k-dir=whatever`
+
+The dataset will be downloaded into `segmenter/data/ade20k` and prepared for processing. An example run would look like this:
+
+```
+>>> python benchmark.py --in1k-dir=whatever
+Downloading segmenter/data/ade20k/downloads/ADEChallengeData2016.zip from http://data.csail.mit.edu/places/ADEchallenge/ADEChallengeData2016.zip...
+944710KB [01:23, 11273.07KB/s]                                                                                                               
+Downloading segmenter/data/ade20k/downloads/release_test.zip from http://data.csail.mit.edu/places/ADEchallenge/release_test.zip...
+100%|██████████████████████████████████████████████████████████████████████████| 206856/206856 [00:20<00:00, 10207.88KB/s]
+```
+
+When training with the `--stack` option, the pretrained model checkpoint from the MAE paper is required. This will also be downloaded automatically if not already present, if `--stack` is specified. If you want to only download the checkpoint, you can start the benchmark script like this:
+
+`python benchmark.py --stack --in1k-dir=whatever`
+
+The checkpoint will be downloaded into the repository root. An example run would look like this:
+
+```
+>>> python benchmark.py --stack --in1k-dir=whatever
+Downloading pretrained checkpoint...
+--2024-07-17 13:24:12--  https://dl.fbaipublicfiles.com/mae/pretrain/mae_pretrain_vit_large.pth
+Resolving dl.fbaipublicfiles.com (dl.fbaipublicfiles.com)... 2600:9000:2684:f800:13:6e38:acc0:93a1, 2600:9000:2684:a00:13:6e38:acc0:93a1, 2600:9000:2684:f600:13:6e38:acc0:93a1, ...
+Connecting to dl.fbaipublicfiles.com (dl.fbaipublicfiles.com)|2600:9000:2684:f800:13:6e38:acc0:93a1|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 1213314565 (1.1G) [binary/octet-stream]
+Saving to: ‘mae_pretrain_vit_large.pth’
+
+mae_pretrain_vit_large.pth          100%[================================================================>]   1.13G  16.4MB/s    in 82s     
+
+2024-07-17 13:25:35 (14.1 MB/s) - ‘mae_pretrain_vit_large.pth’ saved [1213314565/1213314565]
+
+```
