@@ -32,6 +32,8 @@ def get_args_parser():
                         help='Number of epochs to pretrain before each ADE20k evaluation run')
     parser.add_argument('--stack', action='store_true',
                         help='Continue training on top of the MAE paper\'s pretrained checkpoint')
+    parser.add_argument('--eval', default=-1, type=int,
+                        help='Evaluate the model by fine-tuning on ADE20k')
 
     return parser
 
@@ -94,33 +96,50 @@ def main(args):
         copyfile(CHECKPOINT_NAME, subfolder/"checkpoint-0.pth")
 
 
-    runs = args.pretrain_epochs//args.eval_freq
-    for i in range(runs):
-        resume = ""
-        if i or args.stack:
-            resume = f"{args.output_dir}/pretrain_output/{args.mask_method}/checkpoint-{epochs}.pth"
-        epochs = args.eval_freq * (i+1)
-        print(f"Training run {i+1}/{runs} for {epochs} epochs")
-        mae_args = get_mae_args(args.in1k_dir, args.output_dir, args.mask_method, args.coverage_ratio, args.gpu, epochs, resume)
-        if args.stack and i == 0:
-            mae_args += ["--stack"]
+    if args.eval == -1:
+        runs = args.pretrain_epochs//args.eval_freq
+        for i in range(runs):
+            resume = ""
+            if i or args.stack:
+                resume = f"{args.output_dir}/pretrain_output/{args.mask_method}/checkpoint-{epochs}.pth"
+            epochs = args.eval_freq * (i+1)
+            print(f"Training run {i+1}/{runs} for {epochs} epochs")
+            mae_args = get_mae_args(args.in1k_dir, args.output_dir, args.mask_method, args.coverage_ratio, args.gpu, epochs, resume)
+            if args.stack and i == 0:
+                mae_args += ["--stack"]
 
-        if args.num_gpus > 1:
-            tdr_args = ["--standalone", "--nnodes", "1", "--nproc-per-node", str(args.num_gpus)]
-            tdr_args += ["mae/main_pretrain.py"]
-            tdr_args += mae_args
-            tdr_args = tdr_parse_args(tdr_args)
-            os.environ["OMP_NUM_THREADS"] = "1"
-            td_run(tdr_args)
-        else:
-            mae_args = mae_argparser().parse_args(mae_args)
-            mae_main(mae_args)
+            if args.num_gpus > 1:
+                tdr_args = ["--standalone", "--nnodes", "1", "--nproc-per-node", str(args.num_gpus)]
+                tdr_args += ["mae/main_pretrain.py"]
+                tdr_args += mae_args
+                tdr_args = tdr_parse_args(tdr_args)
+                os.environ["OMP_NUM_THREADS"] = "1"
+                td_run(tdr_args)
+            else:
+                mae_args = mae_argparser().parse_args(mae_args)
+                mae_main(mae_args)
 
-        os.rename(
-            f"{args.output_dir}/pretrain_output/{args.mask_method}/checkpoint-{epochs-1}.pth",
-            f"{args.output_dir}/pretrain_output/{args.mask_method}/checkpoint-{epochs}.pth")
+            os.rename(
+                f"{args.output_dir}/pretrain_output/{args.mask_method}/checkpoint-{epochs-1}.pth",
+                f"{args.output_dir}/pretrain_output/{args.mask_method}/checkpoint-{epochs}.pth")
 
-        print(f"Evaluating run {i+1}/{runs}")
+            print(f"Evaluating run {i+1}/{runs}")
+            seg_args = get_seg_args(args.mask_method, epochs, args.gpu)
+            if args.num_gpus > 1:
+                tdr_args = ["--standalone", "--nnodes", "1", "--nproc-per-node", str(args.num_gpus)]
+                tdr_args += ["segmenter/segm/train.py"]
+                tdr_args += seg_args
+                tdr_args = tdr_parse_args(tdr_args)
+                os.environ["OMP_NUM_THREADS"] = "1"
+                td_run(tdr_args)
+            else:
+                seg_main.main(seg_args, standalone_mode=False)
+    else:
+        epochs = args.eval
+        chp = f"{args.output_dir}/pretrain_output/{args.mask_method}/checkpoint-{epochs}.pth"
+        if not Path(chp).is_file():
+            print("The checkpoint to be evaluated does not exist: ", chp)
+            exit(1)
         seg_args = get_seg_args(args.mask_method, epochs, args.gpu)
         if args.num_gpus > 1:
             tdr_args = ["--standalone", "--nnodes", "1", "--nproc-per-node", str(args.num_gpus)]
