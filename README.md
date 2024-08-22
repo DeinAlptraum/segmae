@@ -28,6 +28,7 @@ The most important parts to adapt here are
 - the `--coverage-ratio`, in percent, that we aim for when selecting a mask for an example. The mask with the coverage ratio closest to the given value will be picked.
 - the `--pretrain-epochs` and `--eval-freq`. The former is the number of epochs that we pretrain for in total, while the latter specifies the interval at which to evaluate the pretraining performance by finetuning on the ADE20k semantic segmentation task. I.e. with a setting of 50 for the former and 5 for the latter, the pretraining is run for 50 epochs in total, testing after epoch 5, 10, 15, ...
 - you can optionally add the `--stack` flag. This will download the pretrained checkpoint from the MAE paper, and then attempt to continue pretraining with the chose mask-method
+- you can run just the evaluation by passing `--eval <num>` with the number of epochs whose checkpoint you want to evaluate. Passing -2 evaluates on a fresh model not pre-trained at all, and -3 evalutes on the full MAE-pretrained checkpoint provided by facebook.
 
 For the first pretraining test, I would use the given settings: the four_channels mask method and a coverage ratio of 15%. The latter is an arbitrary choice that feels reasonable to me. The former seems like the best bet for now, as `segments` doesn't include the mask information, and `preencoder` throws away part of the encoder after pretraining.
 

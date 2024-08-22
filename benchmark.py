@@ -57,17 +57,22 @@ def get_mae_args(img1k_dir: str, output_dir: str, mask_method: str, coverage_rat
 
 def get_seg_args(mask_method: str, epochs: int, gpu: int) -> dict:
     kwargs = []
-    kwargs += ["--log-dir", f"{args.output_dir}/eval_output/{mask_method}"]
+    kwargs += ["--log-dir", f"{args.output_dir}/eval_output/{mask_method}_{epochs}"]
     kwargs += ["--dataset", "ade20k"]
     kwargs += ["--crop-size", "224"]
     kwargs += ["--backbone", "vit_large_mae"]
     kwargs += ["--decoder", "mask_transformer"]
     kwargs += ["--mae"]
-    kwargs += ["--mae_chp", f"{args.output_dir}/pretrain_output/{args.mask_method}/checkpoint-{epochs}.pth"]
+    if epochs == -2:
+        kwargs += ["--no-resume"]
+    if epochs != -3:
+        kwargs += ["--mae_chp", f"{args.output_dir}/pretrain_output/{args.mask_method}/checkpoint-{epochs}.pth"]
+    else:
+        kwargs += ["--mae_chp", f"./mae_pretrain_vit_large.pth"]
     if mask_method == "four_channels":
         kwargs += ["--channels", "4"]
     if gpu >= 0:
-        os.environ["SLURM_LOCALID"] = str(gpu)
+        os.environ["LOCAL_RANK"] = str(gpu)
     return kwargs
 
 CHECKPOINT_NAME = "mae_pretrain_vit_large.pth"
@@ -137,7 +142,7 @@ def main(args):
     else:
         epochs = args.eval
         chp = f"{args.output_dir}/pretrain_output/{args.mask_method}/checkpoint-{epochs}.pth"
-        if not Path(chp).is_file():
+        if not Path(chp).is_file() and epochs >= -1:
             print("The checkpoint to be evaluated does not exist: ", chp)
             exit(1)
         seg_args = get_seg_args(args.mask_method, epochs, args.gpu)
