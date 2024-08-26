@@ -63,6 +63,7 @@ def get_seg_args(mask_method: str, epochs: int, gpu: int) -> dict:
     kwargs += ["--backbone", "vit_large_mae"]
     kwargs += ["--decoder", "mask_transformer"]
     kwargs += ["--mae"]
+    kwargs += ["--prefix", f"{mask_method}_{epochs}"]
     if epochs == -2:
         kwargs += ["--no-resume"]
     if epochs != -3:
